@@ -1,1 +1,45 @@
+name: Java CI/CD Pipeline
 
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+    
+    # Configure the required permissions for the GITHUB_TOKEN
+    permissions:
+      contents: read
+      packages: write
+      
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+          # Configures ~/.m2/settings.xml for GitHub Packages authentication
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
+
+      - name: Run Unit Tests
+        run: mvn test
+
+      - name: Build and Package Application
+        # -DskipTests prevents tests from running a second time during packaging
+        run: mvn package -DskipTests
+
+      - name: Deploy to GitHub Packages
+        # Deploys the generated package to the registry
+        run: mvn deploy -DskipTests
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          # The GITHUB_TOKEN is automatically provided by GitHub Actions
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
